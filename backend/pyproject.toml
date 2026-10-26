@@ -1,0 +1,44 @@
+[project]
+name = "liberacao-escolar-backend"
+version = "0.1.0"
+description = "API do Sistema Web de Liberação Escolar"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.2",
+    "tzdata>=2024.1; sys_platform == 'win32'",
+    "argon2-cffi>=23.1",
+    "email-validator>=2.3.0",
+    "python-multipart>=0.0.32",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "httpx>=0.27",
+    "ruff>=0.6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "integration: testes que exigem PostgreSQL real de teste",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Depends(...) como valor padrao e o padrao idiomatico do FastAPI.
+extend-immutable-calls = ["fastapi.Depends"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
