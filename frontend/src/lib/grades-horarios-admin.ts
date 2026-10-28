@@ -1,4 +1,5 @@
 
+
 import { apiRequest } from "@/lib/api";
 
 export type TurmaHorario = {
@@ -18,16 +19,42 @@ export type GradeHorarioResposta = {
   total_atividades: number;
 };
 
-export function listarTurmasParaHorarios() {
-  return apiRequest<TurmaHorario[]>("/admin/turmas");
+/**
+ * Lista as turmas disponíveis para gerenciamento
+ * das grades de horários.
+ */
+export function listarTurmasParaHorarios(): Promise<
+  TurmaHorario[]
+> {
+  return apiRequest<TurmaHorario[]>(
+    "/admin/turmas",
+  );
 }
 
-export function listarGradesHorario(turmaId: number) {
+/**
+ * Consulta as versões de grade de uma turma.
+ */
+export function listarGradesHorario(
+  turmaId: number,
+): Promise<GradeHorarioResposta[]> {
+  if (!Number.isSafeInteger(turmaId) || turmaId <= 0) {
+    throw new Error("Identificador da turma inválido.");
+  }
+
   return apiRequest<GradeHorarioResposta[]>(
     `/admin/turmas/${turmaId}/grades`,
   );
 }
 
+/**
+ * Importa uma grade semanal em formato CSV.
+ *
+ * A requisição utiliza o cliente HTTP centralizado,
+ * passando pelo proxy do Next.js.
+ *
+ * Não definir Content-Type manualmente:
+ * o navegador adiciona o boundary do FormData.
+ */
 export async function importarGradeHorario(
   turmaId: number,
   arquivo: File,
@@ -35,44 +62,40 @@ export async function importarGradeHorario(
   horaTermino: string,
   csrfToken: string,
 ): Promise<GradeHorarioResposta> {
+  if (!Number.isSafeInteger(turmaId) || turmaId <= 0) {
+    throw new Error("Identificador da turma inválido.");
+  }
+
+  if (!arquivo || arquivo.size === 0) {
+    throw new Error("Selecione um arquivo CSV válido.");
+  }
+
+  if (!vigenteDesde.trim()) {
+    throw new Error("Informe a data de início da vigência.");
+  }
+
+  if (!horaTermino.trim()) {
+    throw new Error("Informe o horário de término da grade.");
+  }
+
+  if (!csrfToken) {
+    throw new Error(
+      "Sessão inválida. Autentique-se novamente.",
+    );
+  }
+
   const formulario = new FormData();
+
   formulario.append("arquivo", arquivo);
   formulario.append("vigente_desde", vigenteDesde);
   formulario.append("hora_termino", horaTermino);
-  // Utilize a mesma origem configurada em src/lib/api.ts.
-  const apiUrl =
-    process.env.NEXT_PUBLIC_API_URL ??
-    "http://localhost:8000";
 
-  const resposta = await fetch(
-    `${apiUrl.replace(/\/$/, "")}/admin/turmas/${turmaId}/grade/importar`,
+  return apiRequest<GradeHorarioResposta>(
+    `/admin/turmas/${turmaId}/grade/importar`,
     {
       method: "POST",
-      credentials: "include",
-      headers: {
-        "X-CSRF-Token": csrfToken,
-      },
       body: formulario,
+      csrfToken,
     },
   );
-
-  if (!resposta.ok) {
-    const dados = await resposta.json().catch(() => null);
-
-    const detalhe = dados?.detail;
-
-    let mensagem = `Erro HTTP ${resposta.status}.`;
-
-    if (typeof detalhe === "string") {
-      mensagem = detalhe;
-    } else if (Array.isArray(detalhe)) {
-      mensagem = detalhe
-        .map((item: { msg?: string }) => item.msg ?? "Dado inválido")
-        .join("; ");
-    }
-
-    throw new Error(mensagem);
-  }
-
-  return (await resposta.json()) as GradeHorarioResposta;
 }
