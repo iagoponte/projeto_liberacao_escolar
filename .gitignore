@@ -21,3 +21,5 @@ coverage/
 # Ferramentas
 .vscode/
 .idea/
+
+DEPLOY.md
